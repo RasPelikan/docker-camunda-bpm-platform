@@ -1,17 +1,17 @@
 FROM ubuntu:latest
 
-ENV VERSION 7.5.0
+ENV VERSION 7.5.4-ee
 ENV GROUP wildfly
 ENV DISTRO wildfly10
 ENV SERVER wildfly-10.0.0.Final
-ENV LIB_DIR /camunda/modules
-ENV SERVER_CONFIG /camunda/standalone/configuration/standalone.xml
 ENV PREPEND_JAVA_OPTS -Djboss.bind.address=0.0.0.0 -Djboss.bind.address.management=0.0.0.0
-ENV NEXUS https://app.camunda.com/nexus/service/local/artifact/maven/redirect
 ENV LAUNCH_JBOSS_IN_BACKGROUND TRUE
 ENV LANG en_US.UTF-8
+ENV ENTERPRISE_DOWNLOAD https://camunda.org/enterprise-release/camunda-bpm/wildfly10/7.5/7.5.4/camunda-bpm-ee
+ARG ENTERPRISE_USER
+ARG ENTERPRISE_PASSWORD
 
-WORKDIR /camunda
+WORKDIR /opt/jboss/wildfly
 
 # generate locale
 RUN locale-gen en_US.UTF-8
@@ -26,14 +26,14 @@ RUN echo "deb http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main" > /e
     rm -rf /var/cache/* /var/lib/apt/lists/*
 
 # add camunda distro
-RUN wget -O - "${NEXUS}?r=public&g=org.camunda.bpm.${GROUP}&a=camunda-bpm-${DISTRO}&v=${VERSION}&p=tar.gz" | \
-    tar xzf - -C /camunda/ server/${SERVER} --strip 2
+RUN wget --user ${ENTERPRISE_USER} --password ${ENTERPRISE_PASSWORD} -O - "${ENTERPRISE_DOWNLOAD}-${DISTRO}-${VERSION}.tar.gz" | \
+    tar xzf - -C /opt/jboss/wildfly/ server/${SERVER} --strip 2
+RUN rm -fR /opt/jboss/wildfly/standalone/deployments/camunda-welcome.war*
+RUN rm -fR /opt/jboss/wildfly/standalone/deployments/camunda-h2-webapp-7.5.4-ee.war
+RUN rm -fR /opt/jboss/wildfly/standalone/deployments/camunda-example*
 
 # add scripts
 ADD bin/* /usr/local/bin/
-
-# add database drivers
-RUN /usr/local/bin/download-database-drivers.sh "${NEXUS}?r=public&g=org.camunda.bpm&a=camunda-database-settings&v=${VERSION}&p=pom"
 
 EXPOSE 8080
 
